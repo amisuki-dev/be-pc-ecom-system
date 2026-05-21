@@ -1,0 +1,20 @@
+-- AlterTable
+ALTER TABLE "brand" ALTER COLUMN "code" SET DATA TYPE VARCHAR(30);
+
+-- AlterTable
+ALTER TABLE "category" ALTER COLUMN "code" SET DATA TYPE VARCHAR(30);
+
+-- AlterTable
+ALTER TABLE "permission" ALTER COLUMN "code" SET DATA TYPE VARCHAR(30);
+
+-- AlterTable
+ALTER TABLE "product" ALTER COLUMN "code" SET DATA TYPE VARCHAR(30);
+
+-- AlterTable
+ALTER TABLE "role" ALTER COLUMN "code" SET DATA TYPE VARCHAR(30);
+
+-- AlterTable
+ALTER TABLE "specs" ALTER COLUMN "code" SET DATA TYPE VARCHAR(30);
+
+-- AlterTable
+ALTER TABLE "user" ALTER COLUMN "code" SET DATA TYPE VARCHAR(30);

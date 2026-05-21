@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+//output   = "../generated/prisma"
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  INACTIVE
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum DefaultStatus {
+  INACTIVE
+  ACTIVE
+  DELETED
+}
+
+enum CategoryType {
+  GROUP
+  CATEGORY
+}
+
+model User {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique @db.VarChar(30)
+  displayName String @db.VarChar(255)
+  email String @unique @db.VarChar(100)
+  password String @db.VarChar(255)
+  username String @unique @db.VarChar(50)
+  status UserStatus @default(INACTIVE)
+  roleId String
+  role Role @relation(fields: [roleId], references: [id])
+  permissions UserPermission[]
+
+  @@map("user")
+}
+
+model Permission {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(255)
+  status DefaultStatus @default(INACTIVE)
+  path String @db.VarChar(255)
+  roles RolePermission[]
+  users UserPermission[]
+
+  @@map("permission")
+}
+
+model Role{
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(255)
+  status DefaultStatus @default(INACTIVE)
+  permissions RolePermission[]
+  users User[]
+
+  @@map("role")
+}
+
+model RolePermission {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  roleId String
+  role Role @relation(fields: [roleId], references: [id])
+  permissionId String
+  permission Permission @relation(fields: [permissionId], references: [id])
+  status DefaultStatus @default(ACTIVE)
+
+  @@map("rolePermission")
+}
+
+model UserPermission {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  permissionId String
+  permission Permission @relation(fields: [permissionId], references: [id])
+  status DefaultStatus @default(ACTIVE)
+
+  @@map("userPermission")
+}
+
+model Product {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(255)
+  status DefaultStatus @default(INACTIVE)
+  specs ProductSpecs[]
+  categoryId String
+  category Category @relation(fields: [categoryId], references: [id])
+  brandId String
+  brand Brand @relation(fields: [brandId], references: [id])
+
+  @@map("product")
+}
+
+model Specs {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(255)
+  status DefaultStatus @default(INACTIVE)
+  unit String @db.VarChar(50)
+  products ProductSpecs[]
+
+  @@map("specs")
+}
+
+model ProductSpecs {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  productId String
+  product Product @relation(fields: [productId], references: [id])
+  specsId String
+  specs Specs @relation(fields: [specsId], references: [id])
+  value String @db.VarChar(255)
+  status DefaultStatus @default(ACTIVE)
+
+  @@map("productSpecs")
+}
+
+model Category {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(255)
+  status DefaultStatus @default(INACTIVE)
+  type CategoryType @default(CATEGORY)
+  parentId String?
+  parent Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@map("category")
+}
+
+model Brand {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code String @unique @db.VarChar(30)
+  name String @db.VarChar(255)
+  status DefaultStatus @default(INACTIVE)
+  products Product[]
+
+  @@map("brand")
+}
