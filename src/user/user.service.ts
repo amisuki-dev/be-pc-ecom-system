@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { DefaultUserOutputDto, TokenInfo } from './dto/default-user-output.dto';
 import { PrismaService } from '../prisma.service';
-import { Prisma, User, UserStatus } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
@@ -85,6 +85,10 @@ export class UserService {
     });
   }
 
+  async findActiveById(id: string) {
+    return this.getActiveUserById(id);
+  }
+
   private toOutput<T extends object>(data: T) {
     return plainToInstance(DefaultUserOutputDto, data, {
       excludeExtraneousValues: true,
@@ -137,10 +141,14 @@ export class UserService {
       throw new BadRequestException('Tạo tài khoản thất bại');
     }
 
-    return this.toOutput({
-      ...createdUser,
-      tokenInfo: this.generateToken(createdUser.id),
-    });
+    return {
+      data: this.toOutput({
+        ...createdUser,
+        tokenInfo: this.generateToken(createdUser.id),
+      }),
+      code: 0,
+      message: 'Create user success',
+    };
   }
 
   async login(loginUserDto: LoginUserDto) {
@@ -178,24 +186,35 @@ export class UserService {
     if (!checkPassword) {
       throw new BadRequestException('Sai mật khẩu. Vui lòng nhập lại mật khẩu');
     }
-    return this.toOutput({
-      ...userInfo,
-      tokenInfo: this.generateToken(userInfo.id),
-    });
+
+    return {
+      data: this.toOutput({
+        ...userInfo,
+        tokenInfo: this.generateToken(userInfo.id),
+      }),
+      code: 0,
+      message: 'Login success',
+    };
   }
 
   async create(createUserDto: CreateUserDto) {
     return this.register(createUserDto);
   }
 
-  async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany({
+  async findAll(): Promise<any> {
+    const users = await this.prisma.user.findMany({
       where: {
         NOT: {
           status: UserStatus.DELETED,
         },
       },
     });
+
+    return {
+      data: users.map((u) => this.toOutput(u)),
+      code: 0,
+      message: 'Get list user success',
+    };
   }
 
   async getAll(params: {
@@ -204,15 +223,21 @@ export class UserService {
     cursor?: Prisma.UserWhereUniqueInput;
     where?: Prisma.UserWhereInput;
     orderBy?: Prisma.UserOrderByWithRelationInput;
-  }): Promise<User[]> {
+  }): Promise<any> {
     const { skip, take, cursor, where, orderBy } = params;
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       skip,
       take,
       cursor,
       where,
       orderBy,
     });
+
+    return {
+      data: users.map((u) => this.toOutput(u)),
+      code: 0,
+      message: 'Get list user success',
+    };
   }
 
   async findOne(id: string) {
@@ -222,11 +247,19 @@ export class UserService {
       throw new NotFoundException('Không tìm thấy tài khoản.');
     }
 
-    return userInfo;
+    return {
+      data: this.toOutput(userInfo),
+      code: 0,
+      message: 'Get user success',
+    };
   }
 
   async info(user: CurrentUserType) {
-    return this.toOutput(user);
+    return {
+      data: this.toOutput(user),
+      code: 0,
+      message: 'Get info success',
+    };
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
@@ -274,7 +307,11 @@ export class UserService {
       data,
     });
 
-    return this.toOutput(updatedUser);
+    return {
+      data: this.toOutput(updatedUser),
+      code: 0,
+      message: 'Update user success',
+    };
   }
 
   async remove(id: string) {
@@ -284,11 +321,17 @@ export class UserService {
       throw new NotFoundException('Không tìm thấy tài khoản.');
     }
 
-    return this.prisma.user.update({
+    const deletedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: {
         status: UserStatus.DELETED,
       },
     });
+
+    return {
+      data: this.toOutput(deletedUser),
+      code: 0,
+      message: 'Delete user success',
+    };
   }
 }

@@ -30,7 +30,7 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const decoded: any = jwt.verify(token, process.env.SECRET_KEY);
 
-      const user = await this.userService.findOne(decoded.uid);
+      const user = await this.userService.findActiveById(decoded.uid);
 
       if (!user || user.status === 'DELETED') {
         throw new UnauthorizedException('User không hợp lệ');

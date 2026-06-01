@@ -92,11 +92,26 @@ export class CategoryService {
       },
     });
 
-    return this.toOutput(createdCategory);
+    return {
+      data: this.toOutput(createdCategory),
+      code: 0,
+      message: 'Create category success',
+    };
   }
 
   async findAll(query: FindCategoryQueryDto) {
-    const { name, code, status, parentCode, fromDate, toDate } = query;
+    const { name, code, status, parentCode, fromDate, toDate, page = 0, limit = 10 } = query;
+    const normalizedPage = Number(page);
+    const normalizedLimit = Number(limit);
+
+    if (!Number.isInteger(normalizedPage) || normalizedPage < 0) {
+      throw new BadRequestException('Page phải là số nguyên không âm');
+    }
+
+    if (!Number.isInteger(normalizedLimit) || normalizedLimit < 1) {
+      throw new BadRequestException('Limit phải là số nguyên lớn hơn 0');
+    }
+
     const where: Prisma.CategoryWhereInput = {};
 
     if (name) {
@@ -133,9 +148,20 @@ export class CategoryService {
       orderBy: {
         createdAt: 'desc',
       },
+      skip: normalizedPage * normalizedLimit,
+      take: normalizedLimit,
     });
-
-    return categories.map((category) => this.toOutput(category));
+    const total = await this.prisma.category.count({ where });
+    return {
+      data: categories.map((category) => this.toOutput(category)),
+      pagination: {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total,
+      },
+      code: 0,
+      message: 'Get list category success',
+    };
   }
 
   async findOne(code: string) {
@@ -155,7 +181,11 @@ export class CategoryService {
       throw new NotFoundException('Không tìm thấy danh mục');
     }
 
-    return this.toOutput(categoryInfo);
+    return {
+      data: this.toOutput(categoryInfo),
+      code: 0,
+      message: 'Get category success',
+    };
   }
 
   async update(code: string, updateCategoryDto: UpdateCategoryDto) {
@@ -218,7 +248,11 @@ export class CategoryService {
       },
     });
 
-    return this.toOutput(updatedCategory);
+    return {
+      data: this.toOutput(updatedCategory),
+      code: 0,
+      message: 'Update category success',
+    };
   }
 
   async remove(code: string) {
@@ -266,6 +300,10 @@ export class CategoryService {
       },
     });
 
-    return this.toOutput(deletedCategory);
+    return {
+      data: this.toOutput(deletedCategory),
+      code: 0,
+      message: 'Delete category success',
+    };
   }
 }

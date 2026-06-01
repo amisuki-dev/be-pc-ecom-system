@@ -2,7 +2,7 @@ import { DefaultStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
-export class FindCategoryQueryDto {
+export class FindProductQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
@@ -20,7 +20,12 @@ export class FindCategoryQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(30)
-  parentCode?: string;
+  categoryCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  brandCode?: string;
 
   @IsOptional()
   @IsDateString()

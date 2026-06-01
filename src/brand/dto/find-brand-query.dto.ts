@@ -2,7 +2,7 @@ import { DefaultStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
-export class FindCategoryQueryDto {
+export class FindBrandQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
@@ -18,17 +18,12 @@ export class FindCategoryQueryDto {
   status?: DefaultStatus;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(30)
-  parentCode?: string;
+  @IsDateString()
+  startDate?: string;
 
   @IsOptional()
   @IsDateString()
-  fromDate?: string;
-
-  @IsOptional()
-  @IsDateString()
-  toDate?: string;
+  endDate?: string;
 
   @IsOptional()
   @Type(() => Number)

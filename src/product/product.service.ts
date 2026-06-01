@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma.service';
@@ -17,9 +17,11 @@ type ProductWithParent = Prisma.ProductGetPayload<{
 @Injectable()
 export class ProductService {
   constructor(private prisma: PrismaService) {}
+
   private generateCode(): string {
     return randomUUID();
   }
+
   private toOutput(product: ProductWithParent) {
     return plainToInstance(
       DefaultProductOutputDto,
@@ -45,21 +47,39 @@ export class ProductService {
       },
     );
   }
+
+  private async findActiveProductByCode(code: string) {
+    return this.prisma.product.findFirst({
+      where: {
+        code,
+        NOT: {
+          status: DefaultStatus.DELETED,
+        },
+      },
+    });
+  }
+
+  private async getActiveProductByCode(code: string) {
+    const product = await this.findActiveProductByCode(code);
+
+    if (!product) {
+      throw new NotFoundException('Không tìm thấy sản phẩm');
+    }
+
+    return product;
+  }
+
   async create(createProductDto: CreateProductDto) {
     const { code, status, name, categoryCode, brandCode } = createProductDto;
+
     if (code) {
-      const findExistProduct = await this.prisma.product.findFirst({
-        where: {
-          code,
-          NOT: {
-            status: DefaultStatus.DELETED,
-          },
-        },
-      });
+      const findExistProduct = await this.findActiveProductByCode(code);
+
       if (findExistProduct) {
         throw new BadRequestException('Mã sản phẩm đã tồn tại');
       }
     }
+
     const categoryInfo = await this.prisma.category.findFirst({
       where: {
         code: categoryCode,
@@ -108,22 +128,236 @@ export class ProductService {
       },
     });
 
-    return this.toOutput(createdProduct);
+    return {
+      data: this.toOutput(createdProduct),
+      code: 0,
+      message: 'Create product success',
+    };
   }
 
-  findAll() {
-    return `This action returns all product`;
+  async findAll(query: import('./dto/find-product-query.dto').FindProductQueryDto) {
+    const {
+      name,
+      code,
+      status,
+      categoryCode,
+      brandCode,
+      fromDate,
+      toDate,
+      page = 0,
+      limit = 10,
+    } = query;
+    const normalizedPage = Number(page);
+    const normalizedLimit = Number(limit);
+
+    if (!Number.isInteger(normalizedPage) || normalizedPage < 0) {
+      throw new BadRequestException('Page phải là số nguyên không âm');
+    }
+
+    if (!Number.isInteger(normalizedLimit) || normalizedLimit < 1) {
+      throw new BadRequestException('Limit phải là số nguyên lớn hơn 0');
+    }
+
+    const where: Prisma.ProductWhereInput = {};
+
+    if (name) {
+      where.name = { contains: name };
+    }
+
+    if (code) {
+      where.code = code;
+    }
+
+    where.status = status || { not: DefaultStatus.DELETED };
+
+    if (categoryCode) {
+      const category = await this.prisma.category.findFirst({
+        where: { code: categoryCode, NOT: { status: DefaultStatus.DELETED } },
+      });
+      if (!category) {
+        throw new BadRequestException('Không tìm thấy mã danh mục');
+      }
+      where.categoryId = category.id;
+    }
+
+    if (brandCode) {
+      const brand = await this.prisma.brand.findFirst({
+        where: { code: brandCode, NOT: { status: DefaultStatus.DELETED } },
+      });
+      if (!brand) {
+        throw new BadRequestException('Không tìm thấy mã nhãn hàng');
+      }
+      where.brandId = brand.id;
+    }
+
+    if (fromDate && toDate) {
+      where.createdAt = {
+        gte: new Date(fromDate),
+        lte: new Date(toDate),
+      };
+    }
+
+    const products = await this.prisma.product.findMany({
+      where,
+      include: {
+        brand: true,
+        category: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip: normalizedPage * normalizedLimit,
+      take: normalizedLimit,
+    });
+
+    const total = await this.prisma.product.count({ where });
+
+    return {
+      data: products.map((product) => this.toOutput(product)),
+      pagination: {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total,
+      },
+      code: 0,
+      message: 'Get list product success',
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  async findOne(code: string) {
+    const productInfo = await this.prisma.product.findFirst({
+      where: {
+        code,
+        NOT: {
+          status: DefaultStatus.DELETED,
+        },
+      },
+      include: {
+        brand: true,
+        category: true,
+      },
+    });
+
+    if (!productInfo) {
+      throw new NotFoundException('Không tìm thấy sản phẩm');
+    }
+
+    return {
+      data: this.toOutput(productInfo),
+      code: 0,
+      message: 'Get product success',
+    };
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(code: string, updateProductDto: UpdateProductDto) {
+    if (!code) {
+      throw new BadRequestException('Mã Code là bắt buộc');
+    }
+
+    const product = await this.getActiveProductByCode(code);
+    const { name, code: newCode, status, categoryCode, brandCode } = updateProductDto;
+    const data: Prisma.ProductUpdateInput = {};
+
+    if (name !== undefined) {
+      data.name = name;
+    }
+
+    if (status !== undefined) {
+      data.status = status;
+    }
+
+    if (newCode !== undefined && newCode !== code) {
+      const existProduct = await this.findActiveProductByCode(newCode);
+
+      if (existProduct && existProduct.id !== product.id) {
+        throw new BadRequestException('Mã sản phẩm đã tồn tại');
+      }
+
+      data.code = newCode;
+    }
+
+    if (categoryCode !== undefined) {
+      const categoryInfo = await this.prisma.category.findFirst({
+        where: {
+          code: categoryCode,
+          NOT: {
+            status: DefaultStatus.DELETED,
+          },
+        },
+      });
+
+      if (!categoryInfo) {
+        throw new BadRequestException('Không tìm thấy mã danh mục, vui lòng thử lại');
+      }
+
+      data.category = {
+        connect: {
+          id: categoryInfo.id,
+        },
+      };
+    }
+
+    if (brandCode !== undefined) {
+      const brandInfo = await this.prisma.brand.findFirst({
+        where: {
+          code: brandCode,
+          NOT: {
+            status: DefaultStatus.DELETED,
+          },
+        },
+      });
+
+      if (!brandInfo) {
+        throw new BadRequestException('Không tìm thấy mã nhãn hàng, vui lòng thử lại');
+      }
+
+      data.brand = {
+        connect: {
+          id: brandInfo.id,
+        },
+      };
+    }
+
+    const updatedProduct = await this.prisma.product.update({
+      where: { id: product.id },
+      data,
+      include: {
+        brand: true,
+        category: true,
+      },
+    });
+
+    return {
+      data: this.toOutput(updatedProduct),
+      code: 0,
+      message: 'Update product success',
+    };
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  async remove(code: string) {
+    if (!code) {
+      throw new BadRequestException('Mã Code là bắt buộc');
+    }
+
+    const product = await this.getActiveProductByCode(code);
+
+    const deletedProduct = await this.prisma.product.update({
+      where: {
+        id: product.id,
+      },
+      data: {
+        status: DefaultStatus.DELETED,
+      },
+      include: {
+        brand: true,
+        category: true,
+      },
+    });
+
+    return {
+      data: this.toOutput(deletedProduct),
+      code: 0,
+      message: 'Delete product success',
+    };
   }
 }
