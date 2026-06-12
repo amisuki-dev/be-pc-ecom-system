@@ -193,7 +193,7 @@ export class UserService {
         tokenInfo: this.generateToken(userInfo.id),
       }),
       code: 0,
-      message: 'Login success',
+      message: 'Đăng nhập thành công',
     };
   }
 
