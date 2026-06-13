@@ -3,14 +3,16 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { DefaultUserOutputDto, TokenInfo } from './dto/default-user-output.dto';
+import { FindUserQueryDto } from './dto/find-user-query.dto';
 import { PrismaService } from '../prisma.service';
-import { Prisma, UserStatus } from '@prisma/client';
+import { DefaultStatus, Prisma, UserStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { LoginUserDto } from './dto/login-user.dto';
 import { CurrentUserType } from '../auth/interfaces/current-user.interface';
+import { parsePagination } from '../common/utils/pagination';
 
 @Injectable()
 export class UserService {
@@ -61,7 +63,7 @@ export class UserService {
         created: new Date(),
         exp,
       };
-    } catch (error) {
+    } catch {
       throw new BadRequestException('Tạo token Lỗi');
     }
   }
@@ -70,6 +72,17 @@ export class UserService {
     return this.prisma.role.findFirst({
       where: {
         code: 'user',
+      },
+    });
+  }
+
+  private async findActiveRoleByCode(code: string) {
+    return this.prisma.role.findFirst({
+      where: {
+        code,
+        NOT: {
+          status: DefaultStatus.DELETED,
+        },
       },
     });
   }
@@ -201,19 +214,76 @@ export class UserService {
     return this.register(createUserDto);
   }
 
-  async findAll(): Promise<any> {
+  async findAll(query: FindUserQueryDto = {} as FindUserQueryDto): Promise<any> {
+    const {
+      code,
+      username,
+      displayName,
+      email,
+      status,
+      roleCode,
+      sort = 'createdAt',
+      sortDirection = 'desc',
+    } = query;
+    const { page, limit } = parsePagination(query.page, query.limit);
+
+    const where: Prisma.UserWhereInput = {};
+
+    if (code) {
+      where.code = code;
+    }
+
+    if (username) {
+      where.username = username;
+    }
+
+    if (displayName) {
+      where.displayName = {
+        contains: displayName,
+      };
+    }
+
+    if (email) {
+      where.email = email;
+    }
+
+    if (status) {
+      where.status = status;
+    } else {
+      where.status = {
+        not: UserStatus.DELETED,
+      };
+    }
+
+    if (roleCode) {
+      const role = await this.findActiveRoleByCode(roleCode);
+
+      if (!role) {
+        throw new BadRequestException(`Không tìm thấy mã role: ${roleCode}`);
+      }
+
+      where.roleId = role.id;
+    }
+
     const users = await this.prisma.user.findMany({
-      where: {
-        NOT: {
-          status: UserStatus.DELETED,
-        },
-      },
+      where,
+      orderBy: {
+        [sort]: sortDirection,
+      } as Prisma.UserOrderByWithRelationInput,
+      skip: page * limit,
+      take: limit,
     });
+    const total = await this.prisma.user.count({ where });
 
     return {
       data: users.map((u) => this.toOutput(u)),
+      pagination: {
+        page,
+        limit,
+        total,
+      },
       code: 0,
-      message: 'Get list user success',
+      message: 'Lấy danh sách khách hàng thành công',
     };
   }
 
