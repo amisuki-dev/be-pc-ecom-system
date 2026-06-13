@@ -226,6 +226,7 @@ export class UserService {
       sortDirection = 'desc',
     } = query;
     const { page, limit } = parsePagination(query.page, query.limit);
+
     const where: Prisma.UserWhereInput = {};
 
     if (code) {
