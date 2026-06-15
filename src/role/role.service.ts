@@ -34,7 +34,7 @@ export class RoleService {
               code: rp.permission.code,
               status: rp.permission.status,
               path: rp.permission.path,
-              method: (rp.permission as any).method, // Ép kiểu tạm thời nếu schema.prisma chưa chạy npx prisma generate lại trường method
+              method: rp.permission.method,
             }))
           : [],
       },
@@ -97,7 +97,6 @@ export class RoleService {
         data: rolePermissionData,
       });
 
-      // Lấy lại dữ liệu đầy đủ kèm permissions hệ thống để format đầu ra
       const roleInfo = await tx.role.findUnique({
         where: { id: createRole.id },
         include: {
@@ -106,7 +105,7 @@ export class RoleService {
           },
         },
       });
-      const formattedData = this.toOutput(roleInfo as RoleWithPermissions);
+      const formattedData = this.toOutput(roleInfo);
       return {
         data: formattedData,
         code: '000',

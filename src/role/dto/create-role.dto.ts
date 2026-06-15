@@ -1,5 +1,5 @@
 import { DefaultStatus } from '@prisma/client';
-import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateRoleDto {
   @IsString()
@@ -13,11 +13,11 @@ export class CreateRoleDto {
   code?: string;
 
   @IsOptional()
-  @IsIn([Object.values(DefaultStatus)])
+  @IsEnum(DefaultStatus)
   status?: DefaultStatus;
 
   @IsNotEmpty({ message: 'Thiếu dữ liệu role' })
   @IsArray({ message: 'Permissions phải là một danh sách (array)' })
-  @IsString({ each: true, message: 'Mỗi phần tử trong permissions phải là một chuỗi' }) // Đảm bảo tất cả phần tử là string
+  @IsString({ each: true, message: 'Mỗi phần tử trong permissions phải là một chuỗi' })
   permissions: string[];
 }
