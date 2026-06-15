@@ -6,6 +6,9 @@ import { PrismaService } from 'src/prisma.service';
 import { nanoid } from 'nanoid';
 import { plainToInstance } from 'class-transformer';
 import { DefaultRoleOutputDto } from './dto/default-role-output.dto';
+import { RoleQueryDto } from './dto/role-query.dto';
+import dayjs from 'dayjs';
+import { globalConfig } from 'src/common/constants';
 
 type RoleWithPermissions = Prisma.RoleGetPayload<{
   include: {
@@ -114,8 +117,83 @@ export class RoleService {
     });
   }
 
-  findAll() {
-    return `This action returns all role`;
+  async findAll(roleQueryDto: RoleQueryDto) {
+    const {
+      name,
+      code,
+      status,
+      fromDate,
+      toDate,
+      page = 0,
+      limit = 10,
+      paging = 'true',
+    } = roleQueryDto;
+    const normalizedPage = Number(page);
+    const normalizedLimit = Number(limit);
+    const { booleanConfig } = globalConfig;
+    const mappedPaging = booleanConfig[paging] ?? true;
+    if (!Number.isInteger(normalizedPage) || normalizedPage < 0) {
+      throw new BadRequestException('Page phải là số nguyên không âm');
+    }
+
+    if (!Number.isInteger(normalizedLimit) || normalizedLimit < 1) {
+      throw new BadRequestException('Limit phải là số nguyên lớn hơn 0');
+    }
+    const where: Prisma.RoleWhereInput = {};
+    if (name) {
+      where.name = {
+        contains: name,
+      };
+    }
+    if (code) {
+      where.code = code;
+    }
+    where.status = status || { not: DefaultStatus.DELETED };
+    if (fromDate && toDate) {
+      where.createdAt = {
+        gte: dayjs(fromDate).startOf('day').toDate(),
+        lte: dayjs(toDate).endOf('day').toDate(),
+      };
+    }
+    if (mappedPaging) {
+      const roles = await this.prisma.role.findMany({
+        where,
+        include: {
+          permissions: {
+            include: { permission: true },
+          },
+        },
+        skip: normalizedLimit * normalizedPage,
+        take: normalizedLimit,
+      });
+      const total = await this.prisma.role.count({ where });
+      return {
+        data: roles.map((role) => this.toOutput(role)),
+        pagination: {
+          page: normalizedPage,
+          limit: normalizedLimit,
+          total,
+        },
+        code: '000',
+        message: 'Lấy danh sách quyền thành công',
+      };
+    } else {
+      const roles = await this.prisma.role.findMany({
+        where,
+        include: {
+          permissions: {
+            include: { permission: true },
+          },
+        },
+        skip: normalizedLimit * normalizedPage,
+        take: normalizedLimit,
+      });
+      return {
+        data: roles.map((role) => this.toOutput(role)),
+        code: '000',
+        message: 'Lấy danh sách quyền thành công',
+      };
+    }
   }
 
   findOne(id: number) {
