@@ -196,8 +196,33 @@ export class RoleService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} role`;
+  async findOne(code: string) {
+    if (!code) {
+      throw new BadRequestException('Mã định danh là bắt buộc');
+    }
+    const role = await this.prisma.role.findFirst({
+      where: {
+        code,
+        NOT: {
+          status: DefaultStatus.DELETED,
+        },
+      },
+      include: {
+        permissions: {
+          include: { permission: true },
+        },
+      },
+    });
+    if (!role) {
+      throw new BadRequestException('Không tìm thấy quyền');
+    }
+    const data = this.toOutput(role);
+
+    return {
+      data,
+      code: '000',
+      message: 'Lấy chi tiết quyền thành công',
+    };
   }
 
   update(id: number, updateRoleDto: UpdateRoleDto) {
