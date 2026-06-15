@@ -29,6 +29,16 @@ enum CategoryType {
   CATEGORY
 }
 
+enum MethodType {
+  GET
+  POST
+  PUT 
+  PATCH
+  DELETE 
+  HEAD
+  OPTIONS
+}
+
 model User {
   id String @id @default(uuid())
   createdAt DateTime @default(now())
@@ -54,6 +64,7 @@ model Permission {
   name String @db.VarChar(255)
   status DefaultStatus @default(INACTIVE)
   path String @db.VarChar(255)
+  method MethodType @default(OPTIONS)
   roles RolePermission[]
   users UserPermission[]
 

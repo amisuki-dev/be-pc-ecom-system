@@ -10,6 +10,7 @@ import { ProductModule } from './product/product.module';
 import { BrandModule } from './brand/brand.module';
 import { SpecsModule } from './specs/specs.module';
 import { ProductspecsModule } from './productspecs/productspecs.module';
+import { RoleModule } from './role/role.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ProductspecsModule } from './productspecs/productspecs.module';
     BrandModule,
     SpecsModule,
     ProductspecsModule,
+    RoleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
