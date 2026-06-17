@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { DefaultStatus, Prisma } from '@prisma/client';
@@ -23,6 +23,78 @@ type RoleWithPermissions = Prisma.RoleGetPayload<{
 @Injectable()
 export class RoleService {
   constructor(private prisma: PrismaService) {}
+
+  private async findActiveRoleByCode(code: string) {
+    return this.prisma.role.findFirst({
+      where: {
+        code,
+        NOT: {
+          status: DefaultStatus.DELETED,
+        },
+      },
+    });
+  }
+
+  private async getActiveRoleByCode(code: string) {
+    const role = await this.findActiveRoleByCode(code);
+
+    if (!role) {
+      throw new NotFoundException('Không tìm thấy quyền');
+    }
+
+    return role;
+  }
+
+  private async getActivePermissionsByCodes(permissionCodes: string[]) {
+    const uniqueCodes = [...new Set(permissionCodes)];
+
+    const permissions = await this.prisma.permission.findMany({
+      where: {
+        code: {
+          in: uniqueCodes,
+        },
+        NOT: {
+          status: DefaultStatus.DELETED,
+        },
+      },
+    });
+
+    if (permissions.length !== uniqueCodes.length) {
+      throw new NotFoundException('Danh sách phân quyền có phần tử không tồn tại hoặc đã bị xóa');
+    }
+
+    return permissions;
+  }
+
+  private async replaceRolePermissions(
+    tx: Prisma.TransactionClient,
+    roleId: string,
+    permissionCodes?: string[],
+  ) {
+    if (permissionCodes === undefined) {
+      return;
+    }
+
+    const permissions = await this.getActivePermissionsByCodes(permissionCodes);
+
+    await tx.rolePermission.deleteMany({
+      where: {
+        roleId,
+      },
+    });
+
+    if (!permissions.length) {
+      return;
+    }
+
+    await tx.rolePermission.createMany({
+      data: permissions.map((permission) => ({
+        roleId,
+        permissionId: permission.id,
+        status: DefaultStatus.ACTIVE,
+      })),
+    });
+  }
 
   private toOutput(role: RoleWithPermissions) {
     return plainToInstance(
@@ -51,35 +123,13 @@ export class RoleService {
     const { name, code, status, permissions } = createRoleDto;
 
     if (code) {
-      const findExist = await this.prisma.role.findFirst({
-        where: {
-          code,
-          NOT: {
-            status: DefaultStatus.DELETED,
-          },
-        },
-      });
+      const findExist = await this.findActiveRoleByCode(code);
       if (findExist) {
         throw new BadRequestException('Mã phân quyền đã tồn tại. Vui lòng sử dụng mã khác');
       }
     }
 
-    const checkPermissions = await this.prisma.permission.findMany({
-      where: {
-        code: {
-          in: permissions,
-        },
-        NOT: {
-          status: DefaultStatus.DELETED,
-        },
-      },
-    });
-
-    if (checkPermissions.length !== permissions.length) {
-      throw new BadRequestException(
-        'Danh sách phân quyền đã chọn có phân quyền đã xóa hoặc không hợp lệ',
-      );
-    }
+    const checkPermissions = await this.getActivePermissionsByCodes(permissions);
 
     return await this.prisma.$transaction(async (tx) => {
       const createRole = await tx.role.create({
@@ -225,11 +275,108 @@ export class RoleService {
     };
   }
 
-  update(id: number, updateRoleDto: UpdateRoleDto) {
-    return `This action updates a #${id} role`;
+  async update(code: string, updateRoleDto: UpdateRoleDto) {
+    if (!code) {
+      throw new BadRequestException('Mã Code là bắt buộc');
+    }
+
+    const role = await this.getActiveRoleByCode(code);
+    const { name, code: newCode, status, permissions } = updateRoleDto;
+    const data: Prisma.RoleUpdateInput = {};
+
+    if (name !== undefined) {
+      data.name = name;
+    }
+
+    if (status !== undefined) {
+      data.status = status;
+    }
+
+    if (newCode !== undefined && newCode !== code) {
+      const existRole = await this.findActiveRoleByCode(newCode);
+
+      if (existRole && existRole.id !== role.id) {
+        throw new BadRequestException('Mã phân quyền đã tồn tại. Vui lòng sử dụng mã khác');
+      }
+
+      data.code = newCode;
+    }
+
+    const updatedRole = await this.prisma.$transaction(async (tx) => {
+      const roleRecord = await tx.role.update({
+        where: {
+          id: role.id,
+        },
+        data,
+      });
+
+      await this.replaceRolePermissions(tx, roleRecord.id, permissions);
+
+      return roleRecord;
+    });
+
+    const roleInfo = await this.prisma.role.findUnique({
+      where: { id: updatedRole.id },
+      include: {
+        permissions: {
+          include: { permission: true },
+        },
+      },
+    });
+
+    return {
+      data: this.toOutput(roleInfo),
+      code: '000',
+      message: 'Cập nhật phân quyền thành công',
+    };
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} role`;
+  async remove(code: string) {
+    if (!code) {
+      throw new BadRequestException('Mã Code là bắt buộc');
+    }
+
+    const role = await this.getActiveRoleByCode(code);
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        roleId: role.id,
+        NOT: {
+          status: DefaultStatus.DELETED,
+        },
+      },
+    });
+
+    if (user) {
+      throw new BadRequestException('Không thể xóa phân quyền đang được gán cho tài khoản');
+    }
+
+    const deletedRole = await this.prisma.$transaction(async (tx) => {
+      await tx.rolePermission.deleteMany({
+        where: {
+          roleId: role.id,
+        },
+      });
+
+      return tx.role.update({
+        where: {
+          id: role.id,
+        },
+        data: {
+          status: DefaultStatus.DELETED,
+        },
+        include: {
+          permissions: {
+            include: { permission: true },
+          },
+        },
+      });
+    });
+
+    return {
+      data: this.toOutput(deletedRole),
+      code: '000',
+      message: 'Xóa phân quyền thành công',
+    };
   }
 }

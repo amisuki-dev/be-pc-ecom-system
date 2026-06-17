@@ -23,13 +23,13 @@ export class RoleController {
     return this.roleService.findOne(code);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
-    return this.roleService.update(+id, updateRoleDto);
+  @Patch(':code')
+  update(@Param('code') code: string, @Body() updateRoleDto: UpdateRoleDto) {
+    return this.roleService.update(code, updateRoleDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.roleService.remove(+id);
+  @Delete(':code')
+  remove(@Param('code') code: string) {
+    return this.roleService.remove(code);
   }
 }
