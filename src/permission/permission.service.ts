@@ -1,13 +1,31 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DefaultStatus } from '@prisma/client';
+import { DefaultStatus, MethodType, Prisma } from '@prisma/client';
 import { CreatePermissionDto } from './dto/create-permission.dto';
+import { FindPermissionQueryDto } from './dto/find-permission-query.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { PrismaService } from 'src/prisma.service';
 import { nanoid } from 'nanoid';
+import { globalConfig } from 'src/common/constants';
 
 @Injectable()
 export class PermissionService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private toOutput(permission: {
+    name: string;
+    code: string;
+    status: DefaultStatus;
+    path: string;
+    method: MethodType;
+  }) {
+    return {
+      name: permission.name,
+      code: permission.code,
+      status: permission.status,
+      path: permission.path,
+      method: permission.method,
+    };
+  }
 
   private async findActivePermissionByCode(code: string) {
     return this.prisma.permission.findFirst({
@@ -63,8 +81,80 @@ export class PermissionService {
     };
   }
 
-  findAll() {
-    return `This action returns all permission`;
+  async findAll(query: FindPermissionQueryDto) {
+    const { name, code, status, method, path, page = 0, limit = 10, paging = 'true' } = query;
+    const normalizedPage = Number(page);
+    const normalizedLimit = Number(limit);
+    const { booleanConfig } = globalConfig;
+    const mappedPaging = booleanConfig[paging] ?? true;
+
+    if (!Number.isInteger(normalizedPage) || normalizedPage < 0) {
+      throw new BadRequestException('Page phải là số nguyên không âm');
+    }
+
+    if (!Number.isInteger(normalizedLimit) || normalizedLimit < 1) {
+      throw new BadRequestException('Limit phải là số nguyên lớn hơn 0');
+    }
+
+    const where: Prisma.PermissionWhereInput = {};
+
+    if (name) {
+      where.name = {
+        contains: name,
+      };
+    }
+
+    if (code) {
+      where.code = code;
+    }
+
+    if (path) {
+      where.path = path;
+    }
+
+    if (method) {
+      where.method = method;
+    }
+
+    where.status = status || {
+      not: DefaultStatus.DELETED,
+    };
+
+    const permissions = await this.prisma.permission.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      ...(mappedPaging
+        ? {
+            skip: normalizedPage * normalizedLimit,
+            take: normalizedLimit,
+          }
+        : {}),
+    });
+
+    const data = permissions.map((permission) => this.toOutput(permission));
+
+    if (!mappedPaging) {
+      return {
+        data,
+        code: 0,
+        message: 'Get list permission success',
+      };
+    }
+
+    const total = await this.prisma.permission.count({ where });
+
+    return {
+      data,
+      pagination: {
+        page: normalizedPage,
+        limit: normalizedLimit,
+        total,
+      },
+      code: 0,
+      message: 'Get list permission success',
+    };
   }
 
   findOne(id: string) {
