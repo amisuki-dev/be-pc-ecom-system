@@ -11,6 +11,7 @@ import { BrandModule } from './brand/brand.module';
 import { SpecsModule } from './specs/specs.module';
 import { ProductspecsModule } from './productspecs/productspecs.module';
 import { RoleModule } from './role/role.module';
+import { PermissionModule } from './permission/permission.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RoleModule } from './role/role.module';
     SpecsModule,
     ProductspecsModule,
     RoleModule,
+    PermissionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
