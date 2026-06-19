@@ -23,9 +23,9 @@ export class PermissionController {
     return this.permissionService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePermissionDto: UpdatePermissionDto) {
-    return this.permissionService.update(id, updatePermissionDto);
+  @Patch(':code')
+  update(@Param('code') code: string, @Body() updatePermissionDto: UpdatePermissionDto) {
+    return this.permissionService.update(code, updatePermissionDto);
   }
 
   @Delete(':id')

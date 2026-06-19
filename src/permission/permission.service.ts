@@ -161,9 +161,53 @@ export class PermissionService {
     return this.getActivePermissionByCode(id);
   }
 
-  update(id: string, updatePermissionDto: UpdatePermissionDto) {
-    void updatePermissionDto;
-    return `This action updates a #${id} permission`;
+  async update(code: string, updatePermissionDto: UpdatePermissionDto) {
+    if (!code) {
+      throw new BadRequestException('Mã Code là bắt buộc');
+    }
+
+    const permission = await this.getActivePermissionByCode(code);
+    const { name, code: newCode, path, method, status } = updatePermissionDto;
+    const data: Prisma.PermissionUpdateInput = {};
+
+    if (name !== undefined) {
+      data.name = name;
+    }
+
+    if (path !== undefined) {
+      data.path = path;
+    }
+
+    if (method !== undefined) {
+      data.method = method;
+    }
+
+    if (status !== undefined) {
+      data.status = status;
+    }
+
+    if (newCode !== undefined && newCode !== code) {
+      const existPermission = await this.findActivePermissionByCode(newCode);
+
+      if (existPermission && existPermission.id !== permission.id) {
+        throw new BadRequestException('Mã phân quyền đã tồn tại');
+      }
+
+      data.code = newCode;
+    }
+
+    const updatedPermission = await this.prisma.permission.update({
+      where: {
+        id: permission.id,
+      },
+      data,
+    });
+
+    return {
+      data: this.toOutput(updatedPermission),
+      code: 0,
+      message: 'Update permission success',
+    };
   }
 
   remove(id: string) {
