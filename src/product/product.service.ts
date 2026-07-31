@@ -80,26 +80,29 @@ export class ProductService {
       }
     }
 
-    const categoryInfo = await this.prisma.category.findFirst({
-      where: {
-        code: categoryCode,
-        NOT: {
-          status: DefaultStatus.DELETED,
+    const [categoryInfo, brandInfo] = await Promise.all([
+      this.prisma.category.findFirst({
+        where: {
+          code: categoryCode,
+          NOT: {
+            status: DefaultStatus.DELETED,
+          },
         },
-      },
-    });
+      }),
+      this.prisma.brand.findFirst({
+        where: {
+          code: brandCode,
+          NOT: {
+            status: DefaultStatus.DELETED,
+          },
+        },
+      }),
+    ]);
+
     if (!categoryInfo) {
       throw new BadRequestException('Không tìm thấy mã danh mục, vui lòng thử lại');
     }
 
-    const brandInfo = await this.prisma.brand.findFirst({
-      where: {
-        code: brandCode,
-        NOT: {
-          status: DefaultStatus.DELETED,
-        },
-      },
-    });
     if (!brandInfo) {
       throw new BadRequestException('Không tìm thấy mã nhãn hàng, vui lòng thử lại');
     }
@@ -170,10 +173,20 @@ export class ProductService {
 
     where.status = status || { not: DefaultStatus.DELETED };
 
+    const [category, brand] = await Promise.all([
+      categoryCode
+        ? this.prisma.category.findFirst({
+            where: { code: categoryCode, NOT: { status: DefaultStatus.DELETED } },
+          })
+        : Promise.resolve(null),
+      brandCode
+        ? this.prisma.brand.findFirst({
+            where: { code: brandCode, NOT: { status: DefaultStatus.DELETED } },
+          })
+        : Promise.resolve(null),
+    ]);
+
     if (categoryCode) {
-      const category = await this.prisma.category.findFirst({
-        where: { code: categoryCode, NOT: { status: DefaultStatus.DELETED } },
-      });
       if (!category) {
         throw new BadRequestException('Không tìm thấy mã danh mục');
       }
@@ -181,9 +194,6 @@ export class ProductService {
     }
 
     if (brandCode) {
-      const brand = await this.prisma.brand.findFirst({
-        where: { code: brandCode, NOT: { status: DefaultStatus.DELETED } },
-      });
       if (!brand) {
         throw new BadRequestException('Không tìm thấy mã nhãn hàng');
       }
@@ -276,16 +286,30 @@ export class ProductService {
       data.code = newCode;
     }
 
-    if (categoryCode !== undefined) {
-      const categoryInfo = await this.prisma.category.findFirst({
-        where: {
-          code: categoryCode,
-          NOT: {
-            status: DefaultStatus.DELETED,
-          },
-        },
-      });
+    const [categoryInfo, brandInfo] = await Promise.all([
+      categoryCode !== undefined
+        ? this.prisma.category.findFirst({
+            where: {
+              code: categoryCode,
+              NOT: {
+                status: DefaultStatus.DELETED,
+              },
+            },
+          })
+        : Promise.resolve(null),
+      brandCode !== undefined
+        ? this.prisma.brand.findFirst({
+            where: {
+              code: brandCode,
+              NOT: {
+                status: DefaultStatus.DELETED,
+              },
+            },
+          })
+        : Promise.resolve(null),
+    ]);
 
+    if (categoryCode !== undefined) {
       if (!categoryInfo) {
         throw new BadRequestException('Không tìm thấy mã danh mục, vui lòng thử lại');
       }
@@ -298,15 +322,6 @@ export class ProductService {
     }
 
     if (brandCode !== undefined) {
-      const brandInfo = await this.prisma.brand.findFirst({
-        where: {
-          code: brandCode,
-          NOT: {
-            status: DefaultStatus.DELETED,
-          },
-        },
-      });
-
       if (!brandInfo) {
         throw new BadRequestException('Không tìm thấy mã nhãn hàng, vui lòng thử lại');
       }
