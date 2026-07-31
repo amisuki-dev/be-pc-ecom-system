@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma.service';
 import { ProductspecsService } from './productspecs.service';
-import { describe, beforeEach, it } from 'node:test';
+
 
 describe('ProductspecsService', () => {
   let service: ProductspecsService;
