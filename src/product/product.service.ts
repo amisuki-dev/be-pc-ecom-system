@@ -80,26 +80,29 @@ export class ProductService {
       }
     }
 
-    const categoryInfo = await this.prisma.category.findFirst({
-      where: {
-        code: categoryCode,
-        NOT: {
-          status: DefaultStatus.DELETED,
+    const [categoryInfo, brandInfo] = await Promise.all([
+      this.prisma.category.findFirst({
+        where: {
+          code: categoryCode,
+          NOT: {
+            status: DefaultStatus.DELETED,
+          },
         },
-      },
-    });
+      }),
+      this.prisma.brand.findFirst({
+        where: {
+          code: brandCode,
+          NOT: {
+            status: DefaultStatus.DELETED,
+          },
+        },
+      }),
+    ]);
+
     if (!categoryInfo) {
       throw new BadRequestException('Không tìm thấy mã danh mục, vui lòng thử lại');
     }
 
-    const brandInfo = await this.prisma.brand.findFirst({
-      where: {
-        code: brandCode,
-        NOT: {
-          status: DefaultStatus.DELETED,
-        },
-      },
-    });
     if (!brandInfo) {
       throw new BadRequestException('Không tìm thấy mã nhãn hàng, vui lòng thử lại');
     }
