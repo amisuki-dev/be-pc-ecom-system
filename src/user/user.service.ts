@@ -265,15 +265,17 @@ export class UserService {
       where.roleId = role.id;
     }
 
-    const users = await this.prisma.user.findMany({
-      where,
-      orderBy: {
-        [sort]: sortDirection,
-      } as Prisma.UserOrderByWithRelationInput,
-      skip: page * limit,
-      take: limit,
-    });
-    const total = await this.prisma.user.count({ where });
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        orderBy: {
+          [sort]: sortDirection,
+        } as Prisma.UserOrderByWithRelationInput,
+        skip: page * limit,
+        take: limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
 
     return {
       data: users.map((u) => this.toOutput(u)),
