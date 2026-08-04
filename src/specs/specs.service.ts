@@ -7,7 +7,7 @@ import { parsePagination } from 'src/common/utils/pagination';
 import { DefaultSpecOutputDto } from './dto/default-spec-output.dto';
 import { plainToInstance } from 'class-transformer';
 
-type SpecWithRelations = Prisma.SpecsGetPayload<{}>;
+type SpecWithRelations = Prisma.SpecsGetPayload<Record<string, never>>;
 
 @Injectable()
 export class SpecsService {

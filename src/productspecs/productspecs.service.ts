@@ -94,20 +94,29 @@ export class ProductspecsService {
 
     where.status = status || { not: DefaultStatus.DELETED };
 
-    if (productCode) {
-      const product = await this.prisma.product.findFirst({
-        where: { code: productCode, NOT: { status: DefaultStatus.DELETED } },
-      });
-      if (!product) throw new BadRequestException('Không tìm thấy mã sản phẩm');
-      where.productId = product.id;
-    }
+    if (productCode || specsCode) {
+      const [product, specs] = await Promise.all([
+        productCode
+          ? this.prisma.product.findFirst({
+              where: { code: productCode, NOT: { status: DefaultStatus.DELETED } },
+            })
+          : Promise.resolve(null),
+        specsCode
+          ? this.prisma.specs.findFirst({
+              where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
+            })
+          : Promise.resolve(null),
+      ]);
 
-    if (specsCode) {
-      const specs = await this.prisma.specs.findFirst({
-        where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
-      });
-      if (!specs) throw new BadRequestException('Không tìm thấy mã thông số');
-      where.specsId = specs.id;
+      if (productCode) {
+        if (!product) throw new BadRequestException('Không tìm thấy mã sản phẩm');
+        where.productId = product.id;
+      }
+
+      if (specsCode) {
+        if (!specs) throw new BadRequestException('Không tìm thấy mã thông số');
+        where.specsId = specs.id;
+      }
     }
 
     if (fromDate && toDate) {
