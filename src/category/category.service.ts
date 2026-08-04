@@ -69,24 +69,14 @@ export class CategoryService {
       type,
     };
 
-    const findExistCategoryPromise = this.findActiveCategoryByCode(data.code);
-    const findExistParentCategoryPromise = parentCode
-      ? this.findActiveCategoryByCode(parentCode)
-      : Promise.resolve(null);
-
-    const [findExistCategory, findExistParentCategory] = await Promise.all([
-      findExistCategoryPromise,
-      findExistParentCategoryPromise,
-    ]);
+    const findExistCategory = await this.findActiveCategoryByCode(data.code);
 
     if (findExistCategory) {
       throw new BadRequestException('Mã danh mục đã tồn tại');
     }
 
     if (parentCode) {
-      if (!findExistParentCategory) {
-        throw new NotFoundException('Không tìm thấy danh mục');
-      }
+      const findExistParentCategory = await this.getActiveCategoryByCode(parentCode);
 
       data.parent = {
         connect: {
