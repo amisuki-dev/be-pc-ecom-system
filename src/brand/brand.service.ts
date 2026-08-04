@@ -244,19 +244,16 @@ export class BrandService {
       throw new BadRequestException('Mã Code là bắt buộc');
     }
 
-    const [brand, product] = await Promise.all([
-      this.getActiveBrandByCode(code),
-      this.prisma.product.findFirst({
-        where: {
-          brand: {
-            code,
-          },
-          NOT: {
-            status: DefaultStatus.DELETED,
-          },
+    const brand = await this.getActiveBrandByCode(code);
+
+    const product = await this.prisma.product.findFirst({
+      where: {
+        brandId: brand.id,
+        NOT: {
+          status: DefaultStatus.DELETED,
         },
-      }),
-    ]);
+      },
+    });
 
     if (product) {
       throw new BadRequestException('Không thể xóa thương hiệu đang có sản phẩm');
