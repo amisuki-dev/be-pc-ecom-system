@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma.service';
 import { ProductspecsService } from './productspecs.service';
 
+
 describe('ProductspecsService', () => {
   let service: ProductspecsService;
 
