@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MaxLength, MinLength, IsString } from 'class-validator';
+import { IsNotEmpty, MaxLength, MinLength, IsString } from 'class-validator';
 
 export class LoginUserDto {
   //* Validate thông tin đăng nhập
