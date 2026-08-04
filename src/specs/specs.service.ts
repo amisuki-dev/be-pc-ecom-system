@@ -7,7 +7,7 @@ import { parsePagination } from 'src/common/utils/pagination';
 import { DefaultSpecOutputDto } from './dto/default-spec-output.dto';
 import { plainToInstance } from 'class-transformer';
 
-type SpecWithRelations = Prisma.SpecsGetPayload<{}>;
+type SpecWithRelations = Prisma.SpecsGetPayload<Prisma.SpecsDefaultArgs>;
 
 @Injectable()
 export class SpecsService {
@@ -53,13 +53,15 @@ export class SpecsService {
     if (fromDate && toDate)
       where.createdAt = { gte: new Date(fromDate), lte: new Date(toDate) } as any;
 
-    const items = await this.prisma.specs.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip: page * limit,
-      take: limit,
-    });
-    const total = await this.prisma.specs.count({ where });
+    const [items, total] = await Promise.all([
+      this.prisma.specs.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: page * limit,
+        take: limit,
+      }),
+      this.prisma.specs.count({ where }),
+    ]);
 
     return {
       data: items.map((i) => this.toOutput(i)),
