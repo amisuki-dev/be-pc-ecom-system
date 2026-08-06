@@ -114,15 +114,16 @@ export class ProductspecsService {
       where.createdAt = { gte: new Date(fromDate), lte: new Date(toDate) } as any;
     }
 
-    const items = await this.prisma.productSpecs.findMany({
-      where,
-      include: { product: true, specs: true },
-      orderBy: { createdAt: 'desc' },
-      skip: page * limit,
-      take: limit,
-    });
-
-    const total = await this.prisma.productSpecs.count({ where });
+    const [items, total] = await Promise.all([
+      this.prisma.productSpecs.findMany({
+        where,
+        include: { product: true, specs: true },
+        orderBy: { createdAt: 'desc' },
+        skip: page * limit,
+        take: limit,
+      }),
+      this.prisma.productSpecs.count({ where }),
+    ]);
 
     return {
       data: items.map((i) => this.toOutput(i)),
