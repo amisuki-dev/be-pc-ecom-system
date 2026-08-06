@@ -120,7 +120,7 @@ export class PermissionService {
       not: DefaultStatus.DELETED,
     };
 
-    const permissions = await this.prisma.permission.findMany({
+    const permissionsPromise = this.prisma.permission.findMany({
       where,
       orderBy: {
         createdAt: 'desc',
@@ -133,9 +133,10 @@ export class PermissionService {
         : {}),
     });
 
-    const data = permissions.map((permission) => this.toOutput(permission));
-
     if (!mappedPaging) {
+      const permissions = await permissionsPromise;
+      const data = permissions.map((permission) => this.toOutput(permission));
+
       return {
         data,
         code: 0,
@@ -143,7 +144,10 @@ export class PermissionService {
       };
     }
 
-    const total = await this.prisma.permission.count({ where });
+    const totalPromise = this.prisma.permission.count({ where });
+    const [permissions, total] = await Promise.all([permissionsPromise, totalPromise]);
+
+    const data = permissions.map((permission) => this.toOutput(permission));
 
     return {
       data,
