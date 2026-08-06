@@ -51,17 +51,18 @@ export class ProductspecsService {
   async create(createProductspecDto: CreateProductspecDto) {
     const { productCode, specsCode, value, status } = createProductspecDto;
 
-    const product = await this.prisma.product.findFirst({
-      where: { code: productCode, NOT: { status: DefaultStatus.DELETED } },
-    });
+    const [product, specs] = await Promise.all([
+      this.prisma.product.findFirst({
+        where: { code: productCode, NOT: { status: DefaultStatus.DELETED } },
+      }),
+      this.prisma.specs.findFirst({
+        where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
+      }),
+    ]);
 
     if (!product) {
       throw new BadRequestException('Không tìm thấy mã sản phẩm');
     }
-
-    const specs = await this.prisma.specs.findFirst({
-      where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
-    });
 
     if (!specs) {
       throw new BadRequestException('Không tìm thấy mã thông số');
@@ -94,18 +95,27 @@ export class ProductspecsService {
 
     where.status = status || { not: DefaultStatus.DELETED };
 
+    let productPromise, specsPromise;
     if (productCode) {
-      const product = await this.prisma.product.findFirst({
+      productPromise = this.prisma.product.findFirst({
         where: { code: productCode, NOT: { status: DefaultStatus.DELETED } },
       });
+    }
+
+    if (specsCode) {
+      specsPromise = this.prisma.specs.findFirst({
+        where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
+      });
+    }
+
+    const [product, specs] = await Promise.all([productPromise, specsPromise]);
+
+    if (productCode) {
       if (!product) throw new BadRequestException('Không tìm thấy mã sản phẩm');
       where.productId = product.id;
     }
 
     if (specsCode) {
-      const specs = await this.prisma.specs.findFirst({
-        where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
-      });
       if (!specs) throw new BadRequestException('Không tìm thấy mã thông số');
       where.specsId = specs.id;
     }
@@ -155,18 +165,27 @@ export class ProductspecsService {
     if (value !== undefined) data.value = value;
     if (status !== undefined) data.status = status;
 
+    let productPromise, specsPromise;
     if (productCode !== undefined) {
-      const product = await this.prisma.product.findFirst({
+      productPromise = this.prisma.product.findFirst({
         where: { code: productCode, NOT: { status: DefaultStatus.DELETED } },
       });
+    }
+
+    if (specsCode !== undefined) {
+      specsPromise = this.prisma.specs.findFirst({
+        where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
+      });
+    }
+
+    const [product, specs] = await Promise.all([productPromise, specsPromise]);
+
+    if (productCode !== undefined) {
       if (!product) throw new BadRequestException('Không tìm thấy mã sản phẩm');
       data.product = { connect: { id: product.id } } as any;
     }
 
     if (specsCode !== undefined) {
-      const specs = await this.prisma.specs.findFirst({
-        where: { code: specsCode, NOT: { status: DefaultStatus.DELETED } },
-      });
       if (!specs) throw new BadRequestException('Không tìm thấy mã thông số');
       data.specs = { connect: { id: specs.id } } as any;
     }
