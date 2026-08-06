@@ -140,18 +140,21 @@ export class CategoryService {
       };
     }
 
-    const categories = await this.prisma.category.findMany({
-      where,
-      include: {
-        parent: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip: normalizedPage * normalizedLimit,
-      take: normalizedLimit,
-    });
-    const total = await this.prisma.category.count({ where });
+    const [categories, total] = await Promise.all([
+      this.prisma.category.findMany({
+        where,
+        include: {
+          parent: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip: normalizedPage * normalizedLimit,
+        take: normalizedLimit,
+      }),
+      this.prisma.category.count({ where }),
+    ]);
+
     return {
       data: categories.map((category) => this.toOutput(category)),
       pagination: {
