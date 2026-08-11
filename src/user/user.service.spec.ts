@@ -48,7 +48,12 @@ describe('UserService', () => {
   describe('login', () => {
     it('should throw BadRequestException if jwt.sign throws an error', async () => {
       const loginDto = { identifier: 'test@example.com', password: 'password123' };
-      const mockUser = { id: 'user-id', email: 'test@example.com', password: 'hashed-password', status: 'ACTIVE' };
+      const mockUser = {
+        id: 'user-id',
+        email: 'test@example.com',
+        password: 'hashed-password',
+        status: 'ACTIVE',
+      };
 
       (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
       (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
@@ -56,12 +61,20 @@ describe('UserService', () => {
         throw new Error('jwt error');
       });
 
-      await expect(service.login(loginDto)).rejects.toThrow(new BadRequestException('Tạo token Lỗi'));
+      await expect(service.login(loginDto)).rejects.toThrow(
+        new BadRequestException('Tạo token Lỗi'),
+      );
     });
 
     it('should login successfully', async () => {
       const loginDto = { identifier: 'test@example.com', password: 'password123' };
-      const mockUser = { id: 'user-id', email: 'test@example.com', password: 'hashed-password', status: 'ACTIVE', username: 'testuser' };
+      const mockUser = {
+        id: 'user-id',
+        email: 'test@example.com',
+        password: 'hashed-password',
+        status: 'ACTIVE',
+        username: 'testuser',
+      };
 
       (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
       (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
