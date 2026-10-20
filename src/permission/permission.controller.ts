@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { PermissionService } from './permission.service';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { FindPermissionQueryDto } from './dto/find-permission-query.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
+import { PermissionGuard } from '../auth/guards/permission.guard';
 
 @Controller('permission')
+@UseGuards(PermissionGuard)
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 

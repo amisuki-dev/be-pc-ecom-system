@@ -3,7 +3,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { DefaultStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
-import { nanoid } from 'nanoid';
+import { generateCode } from 'src/common/utils/code-generator';
 import { plainToInstance } from 'class-transformer';
 import { DefaultRoleOutputDto } from './dto/default-role-output.dto';
 import { RoleQueryDto } from './dto/role-query.dto';
@@ -135,7 +135,7 @@ export class RoleService {
       const createRole = await tx.role.create({
         data: {
           name,
-          code: code || nanoid(),
+          code: code || generateCode(),
           status: status || DefaultStatus.ACTIVE,
         },
       });

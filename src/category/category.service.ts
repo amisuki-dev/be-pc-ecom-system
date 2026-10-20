@@ -3,7 +3,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PrismaService } from 'src/prisma.service';
 import { DefaultStatus, Prisma } from '@prisma/client';
-import { nanoid } from 'nanoid';
+import { generateCode } from 'src/common/utils/code-generator';
 import { plainToInstance } from 'class-transformer';
 import { DefaultCategoryOutputDto } from './dto/default-category-output.dto';
 import dayjs from 'dayjs';
@@ -65,7 +65,7 @@ export class CategoryService {
     const data: Prisma.CategoryCreateInput = {
       name,
       status: status || DefaultStatus.ACTIVE,
-      code: code || nanoid(),
+      code: code || generateCode(),
       type,
     };
 
