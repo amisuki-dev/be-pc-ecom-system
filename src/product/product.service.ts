@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma.service';
-import { randomUUID } from 'node:crypto';
+import { generateCode } from 'src/common/utils/code-generator';
 import { DefaultStatus, Prisma } from '@prisma/client';
 import { DefaultProductOutputDto } from './dto/default-product-output.dto';
 import { plainToInstance } from 'class-transformer';
@@ -17,10 +17,6 @@ type ProductWithParent = Prisma.ProductGetPayload<{
 @Injectable()
 export class ProductService {
   constructor(private prisma: PrismaService) {}
-
-  private generateCode(): string {
-    return randomUUID();
-  }
 
   private toOutput(product: ProductWithParent) {
     return plainToInstance(
@@ -108,7 +104,7 @@ export class ProductService {
     }
 
     const data: Prisma.ProductCreateInput = {
-      code: code || this.generateCode(),
+      code: code || generateCode(),
       status: status || DefaultStatus.INACTIVE,
       name,
       category: {

@@ -6,6 +6,7 @@ import { Prisma, DefaultStatus } from '@prisma/client';
 import { parsePagination } from 'src/common/utils/pagination';
 import { DefaultSpecOutputDto } from './dto/default-spec-output.dto';
 import { plainToInstance } from 'class-transformer';
+import { generateCode } from 'src/common/utils/code-generator';
 
 type SpecWithRelations = Prisma.SpecsGetPayload<Prisma.SpecsDefaultArgs>;
 
@@ -30,7 +31,7 @@ export class SpecsService {
     }
 
     const data: Prisma.SpecsCreateInput = {
-      code: code || undefined,
+      code: code || generateCode(),
       name,
       unit,
       status: status || DefaultStatus.INACTIVE,

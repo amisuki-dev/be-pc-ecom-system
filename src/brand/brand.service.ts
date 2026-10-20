@@ -3,7 +3,7 @@ import { PrismaService } from 'src/prisma.service';
 import { DefaultStatus, Brand, Prisma } from '@prisma/client';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
-import { nanoid } from 'nanoid';
+import { generateCode } from 'src/common/utils/code-generator';
 import { plainToInstance } from 'class-transformer';
 import { DefaultBrandOutputDto } from './dto/default-brand-output.dto';
 import { FindBrandQueryDto } from './dto/find-brand-query.dto';
@@ -87,7 +87,7 @@ export class BrandService {
     const data: Prisma.BrandCreateInput = {
       name,
       status: status || DefaultStatus.INACTIVE,
-      code: code || nanoid(),
+      code: code || generateCode(),
     };
 
     const findExistBrand = await this.findActiveBrandByCode(data.code);

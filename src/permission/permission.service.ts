@@ -4,7 +4,7 @@ import { CreatePermissionDto } from './dto/create-permission.dto';
 import { FindPermissionQueryDto } from './dto/find-permission-query.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { PrismaService } from 'src/prisma.service';
-import { nanoid } from 'nanoid';
+import { generateCode } from 'src/common/utils/code-generator';
 import { globalConfig } from 'src/common/constants';
 
 @Injectable()
@@ -50,7 +50,7 @@ export class PermissionService {
 
   async create(createPermissionDto: CreatePermissionDto) {
     const { name, code, path, method, status } = createPermissionDto;
-    const normalizedCode = code || nanoid();
+    const normalizedCode = code || generateCode();
 
     const findExistPermission = await this.findActivePermissionByCode(normalizedCode);
 

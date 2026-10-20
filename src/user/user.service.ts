@@ -54,7 +54,7 @@ export class UserService {
           uid: id,
           exp,
         },
-        process.env.SECRET_KEY ?? '',
+        process.env.SECRET_KEY as string,
       );
 
       return {

@@ -12,11 +12,9 @@ import {
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth/jwt-auth.guard';
 import { FindCategoryQueryDto } from './dto/find-category-query.dto';
 
 @Controller('category')
-@UseGuards(JwtAuthGuard)
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
